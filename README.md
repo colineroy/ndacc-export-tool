@@ -7,7 +7,59 @@ Converts raw SHARP (2024-2026), NOG-DB (1988-1994) and MR (2019-2022) files to W
 
 ```bash
 pip install -r requirements.txt
+python gui.py          # graphical interface (WOUDC + NASA AIMS export)
+```
+
+## Command-line usage
+
+### Single file processing (Python API)
+
+```python
+from pathlib import Path
+sys.path.insert(0, "src")
+
+# Sodankyla - SHARP format
+from sharp_dqa import parse_sharp, apply_dqa
+meta, df = parse_sharp("so240111.q10")
+df = apply_dqa(df, meta)
+
+# Marambio - MR format
+from nogdb_mr_parser import load_nogdb_mr
+meta, df = load_nogdb_mr("mr_20211020_1146.txt")
+
+# Export to WOUDC
+from woudc_export import write_woudc_csv
+write_woudc_csv(meta, df, "output.csv")
+
+# Export to NASA AIMS
+from nasaaims_export import write_nasa_aims
+write_nasa_aims(meta, df, output_dir=".", station_key="sdk")
+```
+
+### Batch processing (Sodankyla)
+
+```bash
+# With default paths (data/raw/sharp/ and data/raw/nogdb/)
 python run.py
+
+# With custom directories
+python run.py --sharp-dir D:\sondes\sharp --nogdb-dir D:\sondes\nogdb --output-dir D:\sondes\woudc
+```
+
+### Batch processing (Marambio)
+
+```bash
+python run_mr.py
+```
+
+### Unified CLI
+
+```bash
+# WOUDC export (all stations)
+python export.py woudc --sdk *.q* --mr *.txt
+
+# NASA AIMS export
+python export.py aims --sdk *.q* --mr *.txt
 ```
 
 ## Directory layout
