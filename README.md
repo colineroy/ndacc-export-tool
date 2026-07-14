@@ -49,11 +49,26 @@ python run.py --sharp-dir D:\sondes\sharp --nogdb-dir D:\sondes\nogdb --output-d
 ### Concrete example
 
 ```bash
+# --- WOUDC export ---
+
 # Convert all SHARP files from a folder to WOUDC
 python export.py woudc --sdk "D:\sondes\*.q*" -o "D:\sondes\woudc_output"
 
 # Convert a single SHARP file
 python export.py woudc --sdk "D:\sondes\so240111.q10" -o "D:\sondes\woudc_output"
+
+# --- NASA AIMS export ---
+
+# Convert all SHARP files to NASA AIMS (.bXX)
+python export.py aims --sdk "D:\sondes\*.q*" -o "D:\sondes\aims_output"
+
+# Convert a single SHARP file
+python export.py aims --sdk "D:\sondes\so240111.q10" -o "D:\sondes\aims_output"
+
+# --- Metadata tables ---
+
+# Generate CSV/XLSX metadata tables (uses data/raw/ by default)
+python make_table.py
 ```
 
 ### Batch processing (Marambio)
