@@ -1,4 +1,4 @@
-# raw_to_woudc
+# ndacc-export-tool
 
 DQA homogenization pipeline for ECC ozonesonde data from FMI Sodankyla and Marambio.
 Converts raw SHARP (2024-2026), NOG-DB (1988-1994) and MR (2019-2022) files to WOUDC extCSV and NASA AIMS (.bXX) formats.
@@ -90,13 +90,15 @@ python export.py aims --sdk *.q* --mr *.txt
 ## Directory layout
 
 ```
-raw_to_woudc/
-  run.py                   # GUI launcher (WOUDC + NASA AIMS export)
-  gui.py                   # Alternative entry point
+ndacc-export-tool/
+  gui.py                   # GUI launcher (ttkbootstrap interface)
   gui.spec                 # PyInstaller spec file
+  export.py                # Unified CLI (woudc / aims subcommands)
+  run.py                   # Batch processing (Sodankyla SHARP + NOG-DB)
+  run_mr.py                # Batch processing (Marambio MR)
+  make_table.py            # Generate metadata tables (CSV/XLSX)
   manual_params.csv        # Manual parameters for NOG-DB files
   requirements.txt
-  nasaaims/                # Reference NASA AIMS .bXX files
   src/
     sharp_dqa.py           # SHARP parsing + DQA homogenization
     nogdb_parser.py        # NOG-DB format parser (Sodankyla historical)

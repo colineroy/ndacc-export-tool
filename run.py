@@ -13,9 +13,13 @@ Examples:
 
     # Process only SHARP files
     python run.py --nogdb-dir ""
+
+    # Custom directories
+    python run.py --sharp-dir D:\sondes\sharp --nogdb-dir D:\sondes\nogdb --output-dir D:\sondes\woudc
 """
 
 import sys
+import argparse
 from pathlib import Path
 
 # Ensure src/ is on the Python path
@@ -68,69 +72,93 @@ def _load_manual_params(path: Path) -> dict:
     return manual
 
 
-# ---------------------------------------------------------------------------
-# 1. SHARP files - 2024-2026
-# ---------------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(description="Batch Sodankyla SHARP + NOG-DB processing")
+    parser.add_argument("--sharp-dir", default=None, help="SHARP input directory")
+    parser.add_argument("--nogdb-dir", default=None, help="NOG-DB input directory")
+    parser.add_argument("--output-dir", default=None, help="WOUDC output directory")
+    args = parser.parse_args()
 
-print("=" * 55)
-print("SHARP files (2024-2026)")
-print("=" * 55)
+    sharp_in = Path(args.sharp_dir) if args.sharp_dir else SHARP_INPUT_DIR
+    sharp_out = Path(args.output_dir) / "24-26" if args.output_dir else SHARP_OUTPUT_DIR
+    nogdb_in = Path(args.nogdb_dir) if args.nogdb_dir else NOGDB_INPUT_DIR
+    nogdb_out = Path(args.output_dir) / "89-94" if args.output_dir else NOGDB_OUTPUT_DIR
 
-sharp_files = sorted(SHARP_INPUT_DIR.glob("so*.q*"))
-print(f"  {len(sharp_files)} SHARP file(s) found in {SHARP_INPUT_DIR}")
+    # -----------------------------------------------------------------------
+    # 1. SHARP files - 2024-2026
+    # -----------------------------------------------------------------------
 
-if sharp_files:
-    sharp_results = load_sondes(sharp_files)
-    print(f"  {len(sharp_results)} / {len(sharp_files)} processed successfully")
-    written = write_woudc_batch(sharp_results, output_dir=str(SHARP_OUTPUT_DIR))
-    print(f"  {len(written)} WOUDC file(s) generated in {SHARP_OUTPUT_DIR}\n")
-else:
-    print("  (no files)\n")
+    print("=" * 55)
+    print("SHARP files (2024-2026)")
+    print("=" * 55)
+
+    sharp_files = sorted(sharp_in.glob("so*.q*"))
+    print(f"  {len(sharp_files)} SHARP file(s) found in {sharp_in}")
+
+    if sharp_files:
+        sharp_results = load_sondes(sharp_files)
+        print(f"  {len(sharp_results)} / {len(sharp_files)} processed successfully")
+        written = write_woudc_batch(sharp_results, output_dir=str(sharp_out))
+        print(f"  {len(written)} WOUDC file(s) generated in {sharp_out}\n")
+    else:
+        print("  (no files)\n")
+
+    # -----------------------------------------------------------------------
+    # 2. NOG-DB files - 1988-1994
+    # -----------------------------------------------------------------------
+
+    print("=" * 55)
+    print("NOG-DB files (1988-1994)")
+    print("=" * 55)
+
+    nogdb_files = sorted(nogdb_in.glob("*"))
+    print(f"  {len(nogdb_files)} NOG-DB file(s) found in {nogdb_in}")
+
+    if nogdb_files:
+        manual_params = _load_manual_params(MANUAL_PARAMS_PATH)
+        nogdb_results = []
+        errors = []
+        for f in nogdb_files:
+            try:
+                meta, df = load_nogdb(f, manual_params=manual_params)
+                nogdb_results.append((meta, df))
+            except Exception as e:
+                errors.append((f.name, str(e)))
+        print(f"  {len(nogdb_results)} / {len(nogdb_files)} processed successfully")
+        if errors:
+            print(f"  {len(errors)} error(s):")
+            for name, msg in errors[:5]:
+                print(f"    - {name}: {msg}")
+            if len(errors) > 5:
+                print(f"    ... and {len(errors) - 5} more")
+
+        written = write_woudc_batch(nogdb_results, output_dir=str(nogdb_out))
+        print(f"  {len(written)} WOUDC file(s) generated in {nogdb_out}\n")
+    else:
+        nogdb_results = []
+
+    # -----------------------------------------------------------------------
+    # 3. Summary
+    # -----------------------------------------------------------------------
+
+    if sharp_files and nogdb_files:
+        all_results = sharp_results + nogdb_results
+    elif sharp_files:
+        all_results = sharp_results
+    elif nogdb_files:
+        all_results = nogdb_results
+    else:
+        all_results = []
+
+    no_brewer = [meta for meta, _ in all_results if not meta.brewer_available]
+    if no_brewer:
+        print(f"\n{len(no_brewer)} flight(s) without Brewer normalization"
+              f" (likely polar night or Brewer unavailable):")
+        for meta in no_brewer[:10]:
+            print(f"  - {meta.launch_date} ({meta.serial_ecc})")
+
+    print(f"\nDone. Total: {len(all_results)} profile(s) processed.")
 
 
-# ---------------------------------------------------------------------------
-# 2. NOG-DB files - 1988-1994
-# ---------------------------------------------------------------------------
-
-print("=" * 55)
-print("NOG-DB files (1988-1994)")
-print("=" * 55)
-
-nogdb_files = sorted(NOGDB_INPUT_DIR.glob("*"))
-print(f"  {len(nogdb_files)} NOG-DB file(s) found in {NOGDB_INPUT_DIR}")
-
-if nogdb_files:
-    manual_params = _load_manual_params(MANUAL_PARAMS_PATH)
-    nogdb_results = []
-    errors = []
-    for f in nogdb_files:
-        try:
-            meta, df = load_nogdb(f, manual_params=manual_params)
-            nogdb_results.append((meta, df))
-        except Exception as e:
-            errors.append((f.name, str(e)))
-    print(f"  {len(nogdb_results)} / {len(nogdb_files)} processed successfully")
-    if errors:
-        print(f"  {len(errors)} error(s):")
-        for name, msg in errors[:5]:
-            print(f"    - {name}: {msg}")
-        if len(errors) > 5:
-            print(f"    ... and {len(errors) - 5} more")
-
-    written = write_woudc_batch(nogdb_results, output_dir=str(NOGDB_OUTPUT_DIR))
-    print(f"  {len(written)} WOUDC file(s) generated in {NOGDB_OUTPUT_DIR}\n")
-
-
-# ---------------------------------------------------------------------------
-# 3. Summary
-# ---------------------------------------------------------------------------
-
-all_results = (sharp_results if sharp_files else []) + (nogdb_results if nogdb_files else [])
-no_brewer = [meta for meta, _ in all_results if not meta.brewer_available]
-if no_brewer:
-    print(f"\n{len(no_brewer)} flight(s) without Brewer normalization"
-          f" (likely polar night or Brewer unavailable):")
-    for meta in no_brewer[:10]:
-        print(f"  - {meta.launch_date} ({meta.serial_ecc})")
-
-print(f"\nDone. Total: {len(all_results)} profile(s) processed.")
+if __name__ == "__main__":
+    main()
