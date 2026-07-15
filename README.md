@@ -1,6 +1,6 @@
 # raw_to_woudc
 
-DQA homogenization pipeline for ECC ozonesonde data from FMI Sodankyla (NDACC) and Marambio (SMNA).
+DQA homogenization pipeline for ECC ozonesonde data from FMI Sodankyla and Marambio.
 Converts raw SHARP (2024-2026), NOG-DB (1988-1994) and MR (2019-2022) files to WOUDC extCSV and NASA AIMS (.bXX) formats.
 
 ## Quick start
